@@ -71,6 +71,15 @@ contextBridge.exposeInMainWorld('api', {
   exportData: () => ipcRenderer.invoke('data:export'),
   importData: () => ipcRenderer.invoke('data:import'),
 
+  // Actualizaciones
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  installUpdate: () => ipcRenderer.invoke('updater:install'),
+  onUpdateEvent: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on('update:event', handler);
+    return () => ipcRenderer.removeListener('update:event', handler);
+  },
+
   // Chat
   sendMessage: (payload) => ipcRenderer.invoke('chat:send', payload),
   cancelChat: () => ipcRenderer.invoke('chat:cancel'),

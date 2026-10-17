@@ -38,6 +38,14 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "Vortex Chat"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Dimx28",
+      "repo": "vortex-chat"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

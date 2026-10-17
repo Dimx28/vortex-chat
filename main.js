@@ -5,6 +5,7 @@ const store = require('./src/lib/store');
 const { sendMessage, PROVIDER_PRESETS } = require('./src/lib/apiClient');
 const { runAgent } = require('./src/lib/agent');
 const pluginHost = require('./src/lib/pluginHost');
+const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 let activeAbortController = null;
@@ -39,6 +40,7 @@ app.whenReady().then(() => {
   pluginHost.init(__dirname);
   pluginHost.loadEnabled(store.getConfig().enabledPlugins || {});
   createWindow();
+  setupAutoUpdater();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -47,6 +49,34 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// ---- Actualizaciones automáticas (electron-updater + GitHub Releases) ----
+function setupAutoUpdater() {
+  if (!app.isPackaged) return; // en desarrollo no existe app-update.yml
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on('update-available', (info) =>
+    sendToRenderer('update:event', { type: 'available', version: info.version }));
+  autoUpdater.on('update-not-available', () =>
+    sendToRenderer('update:event', { type: 'not-available' }));
+  autoUpdater.on('download-progress', (p) =>
+    sendToRenderer('update:event', { type: 'progress', percent: p.percent, transferred: p.transferred, total: p.total }));
+  autoUpdater.on('update-downloaded', (info) =>
+    sendToRenderer('update:event', { type: 'downloaded', version: info.version }));
+  autoUpdater.on('error', (err) =>
+    sendToRenderer('update:event', { type: 'error', message: String((err && err.message) || err) }));
+  setTimeout(() => { autoUpdater.checkForUpdates().catch(() => {}); }, 5000);
+  setInterval(() => { autoUpdater.checkForUpdates().catch(() => {}); }, 4 * 60 * 60 * 1000);
+}
+
+ipcMain.handle('updater:check', () => {
+  if (!app.isPackaged) return { dev: true };
+  autoUpdater.checkForUpdates().catch(() => {});
+  return { ok: true };
+});
+ipcMain.handle('updater:install', () => {
+  autoUpdater.quitAndInstall(false, true);
 });
 
 // ---- Configuración (clave de API, modelo) ----

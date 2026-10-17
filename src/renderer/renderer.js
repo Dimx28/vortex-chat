@@ -992,6 +992,43 @@ window.addEventListener('keydown', (e) => {
 
 window.api.onConversationsChanged(() => refreshConversations());
 
+// ---------- Actualizaciones (electron-updater) ----------
+let updateDownloaded = false;
+window.api.onUpdateEvent((evt) => {
+  const banner = el('updateBanner');
+  const text = el('updateText');
+  const bar = el('updateBar');
+  const track = el('updateTrack');
+  const btn = el('updateInstallBtn');
+  if (!banner || !evt) return;
+  if (evt.type === 'available') {
+    updateDownloaded = false;
+    banner.hidden = false;
+    track.hidden = false;
+    btn.hidden = true;
+    bar.style.width = '0%';
+    text.textContent = `⬆ Nueva versión v${evt.version} — descargando…`;
+  } else if (evt.type === 'progress') {
+    const p = Math.min(100, Math.round(evt.percent || 0));
+    banner.hidden = false;
+    if (!updateDownloaded) track.hidden = false;
+    text.textContent = updateDownloaded
+      ? text.textContent
+      : `⬆ Descargando actualización… ${p}%`;
+    bar.style.width = p + '%';
+  } else if (evt.type === 'downloaded') {
+    updateDownloaded = true;
+    banner.hidden = false;
+    track.hidden = true;
+    btn.hidden = false;
+    text.textContent = `✅ v${evt.version} lista — reinicia para instalarla`;
+  } else if (evt.type === 'not-available' || evt.type === 'error') {
+    if (evt.type === 'error') console.warn('Updater:', evt.message);
+    if (!updateDownloaded) banner.hidden = true;
+  }
+});
+el('updateInstallBtn').addEventListener('click', () => window.api.installUpdate());
+
 // ---------- Modelo rápido + medidor de contexto ----------
 const COMMON_MODELS = [
   'anthropic/claude-sonnet-4.5', 'anthropic/claude-opus-4.1', 'anthropic/claude-haiku-4',
