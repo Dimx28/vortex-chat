@@ -1,0 +1,6 @@
+{
+  "name": "Contador de palabras",
+  "description": "Añade al final de cada respuesta el número de palabras. Ejemplo de plugin.",
+  "version": "1.0.0",
+  "main": "index.js"
+}

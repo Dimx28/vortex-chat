@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vortex Chat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="user-bar">
+        <select id="userSelect"></select>
+        <button id="newUserBtn" title="Nuevo usuario">+</button>
+        <button id="userPwBtn" title="Contraseña de este usuario">🔒</button>
+        <button id="themeBtn" title="Cambiar tema (claro/oscuro)">☀️</button>
+      </div>
+      <button id="newChatBtn" class="new-chat-btn">+ Nueva conversación</button>
+      <input id="convoSearch" class="convo-search" type="search" placeholder="🔍 Buscar conversaciones…" />
+      <div class="folders-head">
+        <span class="hint">Carpetas</span>
+        <button id="newFolderBtn" class="link-btn" title="Crear una carpeta para agrupar chats">+ Nueva</button>
+      </div>
+      <div id="convoList" class="convo-list"></div>
+      <button id="agentBtn" class="settings-btn">🤖 Agente</button>
+      <button id="skillsBtn" class="settings-btn">🧩 Skills</button>
+      <button id="pluginsBtn" class="settings-btn">🔌 Plugins</button>
+      <button id="settingsBtn" class="settings-btn">⚙ Configuración</button>
+    </aside>
+
+    <main class="chat-area">
+      <header class="chat-topbar">
+        <input id="quickModelInput" class="quick-model" list="quickModelList" type="text"
+          title="Modelo activo — escribe o elige y pulsa Enter para cambiarlo" placeholder="modelo…" spellcheck="false" />
+        <datalist id="quickModelList"></datalist>
+        <div id="contextMeter" class="context-meter hidden" title="Tokens enviados en el último mensaje / límite estimado del modelo">
+          <span class="meter-fill"></span>
+          <span class="meter-text">—</span>
+        </div>
+      </header>
+      <div id="messages" class="messages"></div>
+
+      <div class="composer">
+        <div id="attachmentPreview" class="attachment-preview"></div>
+        <div class="composer-row">
+          <button id="attachBtn" title="Adjuntar imagen o documento (o pega una imagen con Ctrl+V)">📎</button>
+          <button id="genImgBtn" title="Generar una imagen con IA (Pollinations, gratis)">🎨</button>
+          <button id="ttsBtn" title="Leer las respuestas en voz alta">🔊</button>
+          <select id="skillSelect" title="Aplicar un skill (instrucción de sistema)"></select>
+          <label class="thinking-toggle" title="Pensamiento profundo">
+            <input type="checkbox" id="thinkingToggle" />
+            Pensamiento profundo
+          </label>
+          <textarea id="textInput" placeholder="Escribe un mensaje..." rows="1"></textarea>
+          <button id="sendBtn">Enviar</button>
+        </div>
+        <div class="composer-hints">
+          <button id="exportConvoBtn" class="link-btn" title="Exportar esta conversación a Markdown">⬇ Exportar</button>
+          <span class="hint">Enter envía · Shift+Enter salto de línea · Ctrl+N nueva conversación</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-box">
+      <h2>Configuración</h2>
+
+      <label>Proveedor</label>
+      <select id="providerSelect">
+        <option value="anthropic">Anthropic (Claude, directo)</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="custom">Otro (compatible con OpenAI)</option>
+      </select>
+
+      <div id="baseUrlRow" class="hidden">
+        <label>URL base del proveedor</label>
+        <input id="baseUrlInput" type="text" placeholder="https://.../v1/chat/completions" />
+      </div>
+
+      <label id="apiKeyLabel">Clave de API</label>
+      <input id="apiKeyInput" type="password" placeholder="sk-ant-..." />
+
+      <label>Modelo</label>
+      <select id="modelSelect">
+        <option value="claude-sonnet-5">claude-sonnet-5</option>
+        <option value="claude-sonnet-5-5">claude-sonnet-5-5</option>
+        <option value="claude-opus-5-5">claude-opus-5-5</option>
+        <option value="claude-haiku-5-5">claude-haiku-5-5</option>
+      </select>
+      <input id="modelFreeInput" class="hidden" type="text" placeholder="ej: anthropic/claude-sonnet-4.5, openai/gpt-4o, meta-llama/llama-3.1-70b-instruct" />
+      <p id="providerHint" class="hint hidden"></p>
+
+      <label>Prompt global (instrucción para todas las conversaciones)</label>
+      <textarea id="globalPromptInput" rows="3" placeholder="ej: Responde siempre en español, de forma breve y con ejemplos."></textarea>
+
+      <div class="adv-row">
+        <div>
+          <label for="temperatureInput">Temperatura</label>
+          <input id="temperatureInput" type="number" min="0" max="2" step="0.1" placeholder="0.7" />
+        </div>
+        <div>
+          <label for="maxTokensInput">Máx. tokens respuesta</label>
+          <input id="maxTokensInput" type="number" min="64" max="32000" step="64" placeholder="auto" />
+        </div>
+      </div>
+      <p class="hint">Temperatura: 0 = respuestas más deterministas, 2 = más creativas. Déjalos vacíos para usar los valores del proveedor.</p>
+
+      <div class="data-section">
+        <label>Datos (respaldo)</label>
+        <p class="hint">Exporta tus usuarios y conversaciones a un archivo JSON, o importa uno previo. No incluye tu clave de API.</p>
+        <div class="data-row">
+          <button id="exportBtn">Exportar…</button>
+          <button id="importBtn">Importar…</button>
+        </div>
+        <p id="dataStatus" class="hint data-status hidden"></p>
+      </div>
+
+      <div class="modal-actions">
+        <button id="closeSettingsBtn">Cancelar</button>
+        <button id="saveSettingsBtn" class="primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="passwordModal" class="modal hidden">
+    <div class="modal-box">
+      <h2 id="pwModalTitle">Contraseña</h2>
+      <div id="pwCurrentRow" class="hidden">
+        <label>Contraseña actual</label>
+        <input id="pwCurrentInput" type="password" />
+      </div>
+      <label id="pwNewLabel">Contraseña</label>
+      <input id="pwNewInput" type="password" />
+      <div id="pwConfirmRow" class="hidden">
+        <label>Confirmar contraseña</label>
+        <input id="pwConfirmInput" type="password" />
+      </div>
+      <p id="pwError" class="hint pw-error hidden"></p>
+      <div class="modal-actions">
+        <button id="pwCancelBtn">Cancelar</button>
+        <button id="pwConfirmBtn" class="primary">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="agentModal" class="modal hidden">
+    <div class="modal-box modal-wide">
+      <h2>🤖 Agente</h2>
+      <p class="hint">El agente puede leer y escribir archivos, ejecutar comandos y consultar la web. Cada acción pide tu aprobación antes de ejecutarse.</p>
+
+      <label>Área de trabajo (carpeta del agente)</label>
+      <div class="agent-workspace-row">
+        <span id="agentWorkspaceLabel" class="agent-workspace-label">…</span>
+        <button id="agentChangeWsBtn" title="Cambiar carpeta">Cambiar…</button>
+      </div>
+
+      <label>Tarea para el agente</label>
+      <textarea id="agentTaskInput" rows="3" placeholder="ej: Revisa los archivos de esta carpeta y corrige los errores de sintaxis."></textarea>
+
+      <div class="modal-actions">
+        <button id="agentCloseBtn">Cerrar</button>
+        <button id="agentStartBtn" class="primary">▶ Ejecutar</button>
+      </div>
+
+      <div id="agentLog" class="agent-log hidden"></div>
+
+      <div id="agentApproval" class="agent-approval hidden">
+        <div class="agent-approval-title">⚠ El agente quiere ejecutar una acción:</div>
+        <pre id="agentApprovalDetail" class="agent-approval-detail"></pre>
+        <div class="agent-approval-actions">
+          <button id="agentDenyBtn">Rechazar</button>
+          <button id="agentApproveBtn" class="primary">Aprobar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pluginsModal" class="modal hidden">
+    <div class="modal-box modal-wide">
+      <h2>🔌 Plugins</h2>
+      <p class="hint warning">⚠ Los plugins se ejecutan en tu equipo con permisos completos. Solo activa plugins de fuentes de confianza.</p>
+      <p class="hint">Carpeta: <code id="pluginsDirLabel">…</code></p>
+      <div id="pluginsList" class="skills-list"></div>
+      <div class="modal-actions">
+        <button id="pluginsReloadBtn">↻ Recargar</button>
+        <button id="pluginsCloseBtn" class="primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="skillsModal" class="modal hidden">
+    <div class="modal-box modal-wide">
+      <h2>Skills</h2>
+      <p class="hint">Un skill es una instrucción de sistema reutilizable. Al elegirlo en el chat, su texto se envía al modelo como regla para esa conversación.</p>
+
+      <div id="skillsList" class="skills-list"></div>
+
+      <div class="skills-editor" id="skillsEditor">
+        <label>Nombre</label>
+        <input id="skillNameInput" type="text" placeholder="ej: Traductor formal" />
+        <label>Descripción (opcional)</label>
+        <input id="skillDescInput" type="text" placeholder="Qué hace este skill" />
+        <label>Instrucción (se envía como system prompt)</label>
+        <textarea id="skillContentInput" rows="6" placeholder="Escribe aquí la instrucción que quieres reutilizar…"></textarea>
+        <input type="hidden" id="skillIdInput" value="" />
+      </div>
+
+      <div class="modal-actions">
+        <button id="skillsCloseBtn">Cerrar</button>
+        <button id="skillsDeleteBtn">Borrar</button>
+        <button id="skillsSaveBtn" class="primary">Guardar</button>
+      </div>
+      <div class="skills-actions">
+        <button id="skillsNewBtn">+ Nuevo skill</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../lib/markdownLite.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
