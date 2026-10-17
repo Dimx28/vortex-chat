@@ -24,6 +24,8 @@ function createWindow() {
     height: 760,
     minWidth: 720,
     minHeight: 480,
+    frame: false,
+    backgroundColor: '#101216',
     title: 'Vortex Chat',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -77,6 +79,16 @@ ipcMain.handle('updater:check', () => {
 });
 ipcMain.handle('updater:install', () => {
   autoUpdater.quitAndInstall(false, true);
+});
+
+// ---- Controles de ventana (titlebar personalizado) ----
+ipcMain.handle('win:control', (_evt, action) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (action === 'minimize') mainWindow.minimize();
+  else if (action === 'maximize') {
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+  } else if (action === 'close') mainWindow.close();
 });
 
 // ---- Configuración (clave de API, modelo) ----

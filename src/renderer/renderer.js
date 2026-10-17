@@ -10,6 +10,14 @@ const convoListEl = el('convoList');
 const userSelect = el('userSelect');
 const textInput = el('textInput');
 
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
 // ---------- Markdown ----------
 // Viene de src/lib/markdownLite.js (mismo código que se prueba con Node).
 const { escapeHtml, renderMarkdownLite } = window.MarkdownLite;
@@ -58,6 +66,10 @@ async function refreshUsers() {
   userSelect.innerHTML = users.map((u) =>
     `<option value="${u.id}" ${u.id === current.id ? 'selected' : ''}>${u.hasPassword ? '🔒 ' : ''}${escapeHtml(u.name)}</option>`
   ).join('');
+  const name = (current && current.name) || '';
+  el('drawerProfileName').textContent = name || 'Usuario';
+  el('profileAvatar').textContent = (name.trim().charAt(0) || '?').toUpperCase();
+  el('heroName').textContent = name.trim() || 'there';
 }
 
 userSelect.addEventListener('change', async () => {
@@ -124,10 +136,33 @@ let convosCache = [];
 let foldersCache = [];
 const collapsedFolders = new Set();
 
+function relTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60) return 'now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm';
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+  if (diff < 7 * 86400) return d.toLocaleDateString('en-US', { weekday: 'short' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function setProjectName(title) {
+  const t = (title || '').trim() || 'Nueva conversación';
+  el('titlebarProject').textContent = t;
+  el('crumbProject').textContent = t;
+}
+
 function buildConvoItem(c) {
+  const isActive = c.id === currentConversationId;
   const item = document.createElement('div');
-  item.className = 'convo-item' + (c.id === currentConversationId ? ' active' : '');
-  item.innerHTML = `<span class="title">${escapeHtml(c.title || 'Sin título')}</span>` +
+  item.className = 'convo-item' + (isActive ? ' active' : '');
+  item.innerHTML = `<span class="convo-dot" aria-hidden="true"></span>` +
+    `<span class="title">${escapeHtml(c.title || 'Sin título')}</span>` +
+    (isActive ? '<span class="active-tag">Active</span>' : `<span class="convo-time">${relTime(c.updatedAt)}</span>`) +
     `<span class="actions">` +
     `<span class="mov" title="Mover a carpeta">📁</span>` +
     `<span class="ren" title="Renombrar">✏️</span>` +
@@ -283,9 +318,15 @@ el('newFolderBtn').addEventListener('click', async () => {
   refreshConversations();
 });
 
+function setWelcomeVisible(show) {
+  el('welcome').classList.toggle('hidden', !show);
+}
+
 function clearChat() {
   currentMessages = [];
-  messagesEl.innerHTML = '<div class="empty-state">Comienza una conversación nueva o selecciona una existente.</div>';
+  messagesEl.innerHTML = '';
+  setProjectName(null);
+  setWelcomeVisible(true);
   updateContextMeter();
 }
 
@@ -295,6 +336,7 @@ async function loadConversation(id) {
   if (!convo) { clearChat(); return; }
   currentConversationId = id;
   renderMessages(convo.messages || []);
+  setProjectName(convo.title || null);
   // Restaura el skill activo de esta conversación en el selector.
   el('skillSelect').value = convo.skillId && cachedSkills.some((s) => s.id === convo.skillId) ? convo.skillId : '';
   refreshConversations();
@@ -319,19 +361,28 @@ function enhanceCodeBlocks(container) {
   container.querySelectorAll('pre').forEach((pre) => {
     if (pre.dataset.enh) return;
     pre.dataset.enh = '1';
+    const code = pre.querySelector('code');
+    const langMatch = code && (code.className.match(/language-(\S+)/) || []);
+    const lang = langMatch && langMatch[1] ? langMatch[1] : 'code';
+    const bar = document.createElement('div');
+    bar.className = 'code-bar';
+    const label = document.createElement('span');
+    label.className = 'code-lang';
+    label.textContent = lang;
     const btn = document.createElement('button');
     btn.className = 'code-copy';
     btn.type = 'button';
     btn.textContent = 'Copiar';
     btn.addEventListener('click', async () => {
-      const code = pre.querySelector('code');
       try {
         await navigator.clipboard.writeText(code ? code.innerText : pre.innerText);
         btn.textContent = '✓ Copiado';
       } catch { btn.textContent = '✗ Error'; }
       setTimeout(() => { btn.textContent = 'Copiar'; }, 1500);
     });
-    pre.appendChild(btn);
+    bar.appendChild(label);
+    bar.appendChild(btn);
+    pre.insertBefore(bar, pre.firstChild);
   });
 }
 
@@ -342,11 +393,13 @@ function renderMessages(messages) {
     if (m.role === 'assistant' && m.thinking) appendBubble('thinking', m.thinking, -1, null);
     if (m.role === 'user' || m.role === 'assistant') appendBubble(m.role, m.content, idx, m);
   });
+  setWelcomeVisible(currentMessages.length === 0);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   updateContextMeter();
 }
 
 function appendBubble(role, content, index, msg) {
+  setWelcomeVisible(false);
   const div = document.createElement('div');
   div.className = `msg ${role}`;
   let html = '';
@@ -546,7 +599,7 @@ const API_KEY_HINT = {
 function setStreamingUI(streaming) {
   isStreaming = streaming;
   const btn = el('sendBtn');
-  btn.textContent = streaming ? '⏹ Detener' : 'Enviar';
+  btn.textContent = streaming ? '⏹ Stop' : 'Send ↑';
   btn.classList.toggle('stopping', streaming);
   el('newChatBtn').disabled = streaming;
 }
@@ -974,7 +1027,7 @@ async function exportCurrentConversation() {
   if (res && res.ok) {
     const btn = el('exportConvoBtn');
     const old = btn.textContent;
-    btn.textContent = '✓ Guardado';
+    btn.textContent = '✓';
     btn.style.color = 'var(--accent)';
     setTimeout(() => { btn.textContent = old; btn.style.color = ''; }, 2000);
   } else if (res && res.error !== 'canceled') {
@@ -990,7 +1043,12 @@ window.addEventListener('keydown', (e) => {
   else if (e.shiftKey && (e.key === 'S' || e.key === 's')) { e.preventDefault(); exportCurrentConversation(); }
 });
 
-window.api.onConversationsChanged(() => refreshConversations());
+window.api.onConversationsChanged((payload) => {
+  refreshConversations();
+  if (payload && payload.id === currentConversationId && payload.title) {
+    setProjectName(payload.title);
+  }
+});
 
 // ---------- Actualizaciones (electron-updater) ----------
 let updateDownloaded = false;
@@ -1141,6 +1199,77 @@ document.addEventListener('paste', async (e) => {
   });
   renderAttachmentPreview();
   textInput.focus();
+});
+
+// ---------- Nueva UI: titlebar, riel, dock y menús ----------
+el('winCloseBtn').addEventListener('click', () => window.api.windowControl('close'));
+el('winMinBtn').addEventListener('click', () => window.api.windowControl('minimize'));
+el('winMaxBtn').addEventListener('click', () => window.api.windowControl('maximize'));
+
+document.querySelectorAll('.rail-btn[data-nav]').forEach((btn) => {
+  if (btn.dataset.nav === 'chats') return;
+  btn.addEventListener('click', () => toast('Próximamente disponible.'));
+});
+
+document.querySelector('.quick-note-btn')?.addEventListener('click', () => el('newChatBtn').click());
+
+el('modelPill').addEventListener('click', () => {
+  const inp = el('quickModelInput');
+  inp.focus();
+  inp.select();
+});
+
+el('micBtn').addEventListener('click', () => toast('Dictado por voz: pulsa Win+H en Windows.'));
+
+// Menú del dock (skills y complementos)
+const dockMenu = el('dockMenu');
+el('skillsDockBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const open = dockMenu.classList.toggle('hidden');
+  el('skillsDockBtn').setAttribute('aria-expanded', String(!open));
+  if (!open) el('userMenu').classList.add('hidden');
+});
+dockMenu.addEventListener('click', (e) => e.stopPropagation());
+
+// Menú de perfil / usuarios
+el('profileBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const open = el('userMenu').classList.toggle('hidden');
+  el('profileBtn').setAttribute('aria-expanded', String(!open));
+  if (!open) dockMenu.classList.add('hidden');
+});
+el('userMenu').addEventListener('click', (e) => e.stopPropagation());
+el('logoutBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  el('userMenu').classList.remove('hidden');
+  el('profileBtn').setAttribute('aria-expanded', 'true');
+  dockMenu.classList.add('hidden');
+});
+
+document.addEventListener('click', () => {
+  dockMenu.classList.add('hidden');
+  el('skillsDockBtn').setAttribute('aria-expanded', 'false');
+  el('userMenu').classList.add('hidden');
+  el('profileBtn').setAttribute('aria-expanded', 'false');
+});
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    dockMenu.classList.add('hidden');
+    el('userMenu').classList.add('hidden');
+    el('skillsDockBtn').setAttribute('aria-expanded', 'false');
+    el('profileBtn').setAttribute('aria-expanded', 'false');
+  }
+});
+
+// Tarjetas bento de bienvenida
+document.querySelectorAll('.bento-card').forEach((card) => {
+  card.addEventListener('click', () => {
+    if (isStreaming) return;
+    textInput.value = card.dataset.prompt || '';
+    textInput.dispatchEvent(new Event('input'));
+    textInput.focus();
+    runChat();
+  });
 });
 
 // ---------- Arranque ----------

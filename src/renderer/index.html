@@ -3,67 +3,158 @@
 <head>
   <meta charset="UTF-8" />
   <title>Vortex Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="user-bar">
-        <select id="userSelect"></select>
-        <button id="newUserBtn" title="Nuevo usuario">+</button>
-        <button id="userPwBtn" title="Contraseña de este usuario">🔒</button>
-        <button id="themeBtn" title="Cambiar tema (claro/oscuro)">☀️</button>
+  <div class="shell">
+    <header class="titlebar">
+      <div class="traffic">
+        <button class="tl tl-close" id="winCloseBtn" title="Cerrar" aria-label="Cerrar ventana"></button>
+        <button class="tl tl-min" id="winMinBtn" title="Minimizar" aria-label="Minimizar ventana"></button>
+        <button class="tl tl-max" id="winMaxBtn" title="Maximizar" aria-label="Maximizar ventana"></button>
       </div>
-      <button id="newChatBtn" class="new-chat-btn">+ Nueva conversación</button>
-      <input id="convoSearch" class="convo-search" type="search" placeholder="🔍 Buscar conversaciones…" />
-      <div class="folders-head">
-        <span class="hint">Carpetas</span>
-        <button id="newFolderBtn" class="link-btn" title="Crear una carpeta para agrupar chats">+ Nueva</button>
-      </div>
-      <div id="convoList" class="convo-list"></div>
-      <button id="agentBtn" class="settings-btn">🤖 Agente</button>
-      <button id="skillsBtn" class="settings-btn">🧩 Skills</button>
-      <button id="pluginsBtn" class="settings-btn">🔌 Plugins</button>
-      <button id="settingsBtn" class="settings-btn">⚙ Configuración</button>
-      <div id="updateBanner" class="update-banner" hidden>
-        <div id="updateText" class="update-text">Nueva versión disponible…</div>
-        <div id="updateTrack" class="update-track"><div id="updateBar" class="update-bar"></div></div>
-        <button id="updateInstallBtn" class="update-install-btn" hidden>🔄 Reiniciar para actualizar</button>
-      </div>
-    </aside>
+      <div class="titlebar-title">Vortex Chat <span class="sep">|</span> <span id="titlebarProject">Nueva conversación</span></div>
+      <div class="titlebar-version">v1.5</div>
+    </header>
 
-    <main class="chat-area">
-      <header class="chat-topbar">
-        <input id="quickModelInput" class="quick-model" list="quickModelList" type="text"
-          title="Modelo activo — escribe o elige y pulsa Enter para cambiarlo" placeholder="modelo…" spellcheck="false" />
-        <datalist id="quickModelList"></datalist>
-        <div id="contextMeter" class="context-meter hidden" title="Tokens enviados en el último mensaje / límite estimado del modelo">
-          <span class="meter-fill"></span>
-          <span class="meter-text">—</span>
+    <div class="workspace">
+      <nav class="rail" aria-label="Navegación principal">
+        <div class="rail-logo" title="Vortex Chat">V</div>
+        <div class="rail-nav">
+          <button class="rail-btn active" data-nav="chats" title="Chats" aria-label="Chats">💬</button>
+          <button class="rail-btn" data-nav="web" title="Búsqueda Web — próximamente" aria-label="Búsqueda Web">🌐</button>
+          <button class="rail-btn" data-nav="team" title="Espacio de Equipo — próximamente" aria-label="Espacio de Equipo">👥</button>
+          <button class="rail-btn" data-nav="history" title="Historial de Actividad — próximamente" aria-label="Historial de Actividad">🕒</button>
+          <button class="rail-btn" id="settingsBtn" title="Configuración" aria-label="Configuración">⚙️</button>
         </div>
-      </header>
-      <div id="messages" class="messages"></div>
+        <div class="rail-bottom">
+          <button class="rail-btn" id="logoutBtn" title="Cerrar sesión / cambiar de usuario" aria-label="Cerrar sesión">⎋</button>
+        </div>
+      </nav>
 
-      <div class="composer">
-        <div id="attachmentPreview" class="attachment-preview"></div>
-        <div class="composer-row">
-          <button id="attachBtn" title="Adjuntar imagen o documento (o pega una imagen con Ctrl+V)">📎</button>
-          <button id="genImgBtn" title="Generar una imagen con IA (Pollinations, gratis)">🎨</button>
-          <button id="ttsBtn" title="Leer las respuestas en voz alta">🔊</button>
-          <select id="skillSelect" title="Aplicar un skill (instrucción de sistema)"></select>
-          <label class="thinking-toggle" title="Pensamiento profundo">
-            <input type="checkbox" id="thinkingToggle" />
-            Pensamiento profundo
-          </label>
-          <textarea id="textInput" placeholder="Escribe un mensaje..." rows="1"></textarea>
-          <button id="sendBtn">Enviar</button>
+      <aside class="drawer">
+        <div class="drawer-head">
+          <span class="drawer-title">VORTEX CHAT</span>
+          <button class="ghost-icon quick-note-btn" title="Nueva nota rápida">✚</button>
         </div>
-        <div class="composer-hints">
-          <button id="exportConvoBtn" class="link-btn" title="Exportar esta conversación a Markdown">⬇ Exportar</button>
-          <span class="hint">Enter envía · Shift+Enter salto de línea · Ctrl+N nueva conversación</span>
+        <button id="newChatBtn" class="new-chat-btn">+ New Chat</button>
+        <input id="convoSearch" class="convo-search" type="search" placeholder="🔍 Buscar conversaciones…" />
+        <div class="drawer-section">
+          <span class="section-label">Conversations</span>
+          <button id="newFolderBtn" class="link-btn" title="Crear una carpeta para agrupar chats">+ Nueva</button>
         </div>
-      </div>
-    </main>
+        <div id="convoList" class="convo-list"></div>
+
+        <div id="updateBanner" class="update-banner" hidden>
+          <div id="updateText" class="update-text">Nueva versión disponible…</div>
+          <div id="updateTrack" class="update-track"><div id="updateBar" class="update-bar"></div></div>
+          <button id="updateInstallBtn" class="update-install-btn" hidden>🔄 Reiniciar para actualizar</button>
+        </div>
+
+        <div class="drawer-footer-wrap">
+          <button class="drawer-profile" id="profileBtn" aria-haspopup="true" aria-expanded="false">
+            <span class="profile-avatar" id="profileAvatar">Y</span>
+            <span class="profile-meta">
+              <span class="profile-name" id="drawerProfileName">Yo</span>
+              <span class="profile-plan"><span class="status-dot"></span>Pro Plan</span>
+            </span>
+            <span class="profile-chevron">⋯</span>
+          </button>
+          <div class="user-menu hidden" id="userMenu">
+            <select id="userSelect" title="Cambiar de usuario"></select>
+            <div class="user-menu-row">
+              <button id="newUserBtn" title="Nuevo usuario">+ Nuevo</button>
+              <button id="userPwBtn" title="Contraseña de este usuario">🔒 Contraseña</button>
+              <button id="themeBtn" title="Cambiar tema (claro/oscuro)">☀️</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="chat-area">
+        <header class="ws-topbar">
+          <div class="breadcrumb">Vortex Chat <span class="sep">|</span> <span id="crumbProject">Nueva conversación</span></div>
+          <div class="ws-right">
+            <input id="quickModelInput" class="quick-model" list="quickModelList" type="text"
+              title="Modelo activo — escribe o elige y pulsa Enter para cambiarlo" placeholder="modelo…" spellcheck="false" />
+            <datalist id="quickModelList"></datalist>
+            <button id="modelPill" class="model-pill" title="Modelo activo — clic para cambiarlo">
+              <span class="pulse-dot"></span><span>✨ VORTEX ALPHA 1.5 - ADVANCED</span>
+            </button>
+            <div id="contextMeter" class="context-meter hidden" title="Tokens enviados en el último mensaje / límite estimado del modelo">
+              <span class="meter-fill"></span>
+              <span class="meter-text">—</span>
+            </div>
+            <button id="exportConvoBtn" class="ghost-icon" title="Exportar esta conversación a Markdown">⬇</button>
+          </div>
+        </header>
+
+        <div class="chat-canvas">
+          <div id="messages" class="messages"></div>
+          <div id="welcome" class="welcome">
+            <h1 class="welcome-hero">Hello, <span id="heroName">there</span>. How can I assist you today?</h1>
+            <p class="welcome-sub">Ask me anything or select a topic below.</p>
+            <div class="bento">
+              <button class="bento-card" data-prompt="Draft a blog post about UI trends">
+                <span class="bento-ico pink">🪶</span>
+                <span class="bento-title">Draft a blog post about UI trends</span>
+                <span class="bento-desc">Write engaging content for your platform.</span>
+              </button>
+              <button class="bento-card" data-prompt="Explain quantum computing basics">
+                <span class="bento-ico cyan">⚛️</span>
+                <span class="bento-title">Explain quantum computing basics</span>
+                <span class="bento-desc">Develop quantum computing basics.</span>
+              </button>
+              <button class="bento-card" data-prompt="Generate a Python script for automation">
+                <span class="bento-ico amber">⌨️</span>
+                <span class="bento-title">Generate a Python script for automation</span>
+                <span class="bento-desc">Generate a Python for automation.</span>
+              </button>
+              <button class="bento-card" data-prompt="Design a product roadmap">
+                <span class="bento-ico violet">🔀</span>
+                <span class="bento-title">Design a product roadmap</span>
+                <span class="bento-desc">Write a product roadmap or platform.</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="dock-wrap">
+          <div class="dock">
+            <div id="dockMenu" class="dock-menu hidden">
+              <div class="dock-menu-label">Skill activo</div>
+              <select id="skillSelect" title="Aplicar un skill (instrucción de sistema)"></select>
+              <div class="dock-menu-sep"></div>
+              <button id="agentBtn" class="dock-menu-item">🤖 Agente</button>
+              <button id="skillsBtn" class="dock-menu-item">🧩 Skills</button>
+              <button id="pluginsBtn" class="dock-menu-item">🔌 Plugins</button>
+            </div>
+            <div id="attachmentPreview" class="attachment-preview"></div>
+            <div class="dock-row">
+              <div class="dock-tools">
+                <button id="attachBtn" class="dock-btn" title="Adjuntar imagen o documento (o pega una imagen con Ctrl+V)">📎</button>
+                <button id="genImgBtn" class="dock-btn" title="Generar una imagen con IA (Pollinations, gratis)">🎨</button>
+                <button id="ttsBtn" class="dock-btn" title="Leer las respuestas en voz alta">🔊</button>
+                <button id="micBtn" class="dock-btn" title="Dictado por voz (en Windows usa Win+H)">🎙️</button>
+                <button id="skillsDockBtn" class="dock-btn" title="Skills y complementos" aria-haspopup="true" aria-expanded="false">😊</button>
+              </div>
+              <textarea id="textInput" placeholder="Type your message or '/command'..." rows="1"></textarea>
+              <button id="sendBtn" class="send-btn">Send ↑</button>
+            </div>
+            <div class="dock-hints">
+              <label class="thinking-toggle" title="Pensamiento profundo">
+                <input type="checkbox" id="thinkingToggle" />
+                Pensamiento profundo
+              </label>
+              <span class="hint">Enter envía · Shift+Enter salto de línea · Ctrl+N nueva conversación</span>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
   </div>
 
   <div id="settingsModal" class="modal hidden">

@@ -71,6 +71,9 @@ contextBridge.exposeInMainWorld('api', {
   exportData: () => ipcRenderer.invoke('data:export'),
   importData: () => ipcRenderer.invoke('data:import'),
 
+  // Ventana (titlebar personalizado)
+  windowControl: (action) => ipcRenderer.invoke('win:control', action),
+
   // Actualizaciones
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   installUpdate: () => ipcRenderer.invoke('updater:install'),
