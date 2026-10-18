@@ -168,7 +168,7 @@ function buildConvoItem(c) {
     `<span class="ren" title="Renombrar"><svg class="ico ico-sm"><use href="#i-pencil"></use></svg></span>` +
     `<span class="del" title="Borrar"><svg class="ico ico-sm"><use href="#i-trash"></use></svg></span></span>`;
   item.addEventListener('click', (e) => {
-    if (e.target.classList.contains('del') || e.target.classList.contains('ren') || e.target.classList.contains('mov')) return;
+    if (e.target.closest('.del, .ren, .mov')) return;
     loadConversation(c.id);
   });
   item.querySelector('.mov').addEventListener('click', (e) => {
@@ -203,7 +203,7 @@ function showMoveMenu(c, anchor) {
   const addItem = (label, fn) => {
     const it = document.createElement('div');
     it.className = 'move-menu-item' + (fn === null ? ' muted' : '');
-    it.textContent = label;
+    it.innerHTML = label;
     it.addEventListener('click', (e) => {
       e.stopPropagation();
       menu.remove();
@@ -211,7 +211,7 @@ function showMoveMenu(c, anchor) {
     });
     menu.appendChild(it);
   };
-  if (c.folderId) addItem('📂 Sin carpeta', async () => {
+  if (c.folderId) addItem('<svg class="ico ico-sm"><use href="#i-folder-open"></use></svg> Sin carpeta', async () => {
     await window.api.setConversationFolder(c.id, null);
     refreshConversations();
   });
@@ -227,7 +227,7 @@ function showMoveMenu(c, anchor) {
     sep.className = 'move-menu-sep';
     menu.appendChild(sep);
   }
-  addItem('➕ Nueva carpeta…', async () => {
+  addItem('<svg class="ico ico-sm"><use href="#i-plus"></use></svg> Nueva carpeta…', async () => {
     const nombre = prompt('Nombre de la carpeta:');
     if (!nombre || !nombre.trim()) return;
     const f = await window.api.createFolder(nombre.trim());
@@ -439,29 +439,25 @@ function appendBubble(role, content, index, msg) {
 function buildActionsBar(role, index, msg) {
   const bar = document.createElement('div');
   bar.className = 'msg-actions';
-  const mk = (label, title, fn) => {
+  const mk = (icon, title, fn) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.title = title;
-    if (label === '📋') b.innerHTML = '<svg class="ico ico-sm"><use href="#i-copy"></use></svg>';
-    else if (label === '✏️') b.innerHTML = '<svg class="ico ico-sm"><use href="#i-pencil"></use></svg>';
-    else if (label === '🔄') b.innerHTML = '<svg class="ico ico-sm"><use href="#i-refresh"></use></svg>';
-    else if (label === '🗑') b.innerHTML = '<svg class="ico ico-sm"><use href="#i-trash"></use></svg>';
-    else b.textContent = label;
+    b.innerHTML = `<svg class="ico ico-sm"><use href="#${icon}"></use></svg>`;
     b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
     bar.appendChild(b);
   };
-  mk('📋', 'Copiar texto', async () => {
+  mk('i-copy', 'Copiar texto', async () => {
     try {
       await navigator.clipboard.writeText(contentToText(msg ? msg.content : ''));
     } catch { /* sin permiso de portapapeles */ }
   });
   if (role === 'user') {
-    mk('✏️', 'Editar y reenviar', () => editAndResend(index));
+    mk('i-pencil', 'Editar y reenviar', () => editAndResend(index));
   } else {
-    mk('🔄', 'Regenerar respuesta', () => regenerateReply());
+    mk('i-refresh', 'Regenerar respuesta', () => regenerateReply());
   }
-  mk('🗑', 'Eliminar mensaje', () => deleteMessageAt(index));
+  mk('i-trash', 'Eliminar mensaje', () => deleteMessageAt(index));
   return bar;
 }
 
@@ -540,13 +536,13 @@ el('genImgBtn').addEventListener('click', async () => {
   const text = p.trim();
   if (!text) return;
   const btn = el('genImgBtn');
-  const old = btn.textContent;
+  const old = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = '⏳';
+  btn.innerHTML = '<svg class="ico ico-sm spin"><use href="#i-refresh"></use></svg>';
   btn.title = 'Generando imagen… (puede tardar hasta 1 minuto)';
   const res = await window.api.generateImage(text);
   btn.disabled = false;
-  btn.textContent = old;
+  btn.innerHTML = old;
   btn.title = 'Generar una imagen con IA (Pollinations, gratis)';
   if (!res.ok) {
     alert('No se pudo generar la imagen.\n' + (res.message || res.error || ('HTTP ' + res.status)));
@@ -557,7 +553,7 @@ el('genImgBtn').addEventListener('click', async () => {
     currentConversationId = convo.id;
   }
   const content = [
-    { type: 'text', text: `🎨 Imagen generada: ${text}` },
+    { type: 'text', text: `Imagen generada: ${text}` },
     { type: 'image', source: { type: 'base64', media_type: res.mediaType, data: res.base64 }, fileName: `generada-${Date.now()}.jpg` },
   ];
   const r = await window.api.addMessage(currentConversationId, 'assistant', content);
@@ -595,9 +591,9 @@ el('sendBtn').addEventListener('click', () => {
 });
 
 const API_KEY_HINT = {
-  anthropic: 'Primero configura tu clave de API de Anthropic en ⚙ Configuración.',
-  openrouter: 'Primero configura tu clave de API de OpenRouter en ⚙ Configuración.',
-  custom: 'Primero configura tu clave de API del proveedor en ⚙ Configuración.',
+  anthropic: 'Primero configura tu clave de API de Anthropic en Configuración.',
+  openrouter: 'Primero configura tu clave de API de OpenRouter en Configuración.',
+  custom: 'Primero configura tu clave de API del proveedor en Configuración.',
 };
 
 function setStreamingUI(streaming) {
@@ -839,7 +835,7 @@ async function refreshSkillsList() {
       (s.description ? `<div class="skill-desc">${escapeHtml(s.description)}</div>` : '') + '</div>' +
       '<span class="skill-del" title="Borrar"><svg class="ico ico-sm"><use href="#i-trash"></use></svg></span>';
     item.addEventListener('click', (e) => {
-      if (e.target.classList.contains('skill-del')) return;
+      if (e.target.closest('.skill-del')) return;
       el('skillIdInput').value = s.id;
       el('skillNameInput').value = s.name;
       el('skillDescInput').value = s.description || '';
@@ -1033,10 +1029,10 @@ async function exportCurrentConversation() {
   const res = await window.api.exportConversation(currentConversationId);
   if (res && res.ok) {
     const btn = el('exportConvoBtn');
-    const old = btn.textContent;
-    btn.textContent = '✓';
+    const old = btn.innerHTML;
+    btn.innerHTML = '<svg class="ico"><use href="#i-check"></use></svg>';
     btn.style.color = 'var(--accent)';
-    setTimeout(() => { btn.textContent = old; btn.style.color = ''; }, 2000);
+    setTimeout(() => { btn.innerHTML = old; btn.style.color = ''; }, 2000);
   } else if (res && res.error !== 'canceled') {
     alert('No se pudo exportar: ' + (res.message || res.error));
   }
@@ -1072,21 +1068,21 @@ window.api.onUpdateEvent((evt) => {
     track.hidden = false;
     btn.hidden = true;
     bar.style.width = '0%';
-    text.textContent = `⬆ Nueva versión v${evt.version} — descargando…`;
+    text.textContent = `Nueva versión v${evt.version} — descargando…`;
   } else if (evt.type === 'progress') {
     const p = Math.min(100, Math.round(evt.percent || 0));
     banner.hidden = false;
     if (!updateDownloaded) track.hidden = false;
     text.textContent = updateDownloaded
       ? text.textContent
-      : `⬆ Descargando actualización… ${p}%`;
+      : `Descargando actualización… ${p}%`;
     bar.style.width = p + '%';
   } else if (evt.type === 'downloaded') {
     updateDownloaded = true;
     banner.hidden = false;
     track.hidden = true;
     btn.hidden = false;
-    text.textContent = `✅ v${evt.version} lista — reinicia para instalarla`;
+    text.textContent = `v${evt.version} lista — reinicia para instalarla`;
   } else if (evt.type === 'not-available' || evt.type === 'error') {
     if (evt.type === 'error') console.warn('Updater:', evt.message);
     if (!updateDownloaded) banner.hidden = true;
@@ -1171,7 +1167,9 @@ async function updateContextMeter() {
 function applyTheme(theme) {
   const light = theme === 'light';
   document.body.classList.toggle('light', light);
-  el('themeBtn').textContent = light ? '🌙' : '☀️';
+  el('themeBtn').innerHTML = light
+    ? '<svg class="ico"><use href="#i-moon"></use></svg>'
+    : '<svg class="ico"><use href="#i-sun"></use></svg>';
   el('themeBtn').title = light ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro';
 }
 el('themeBtn').addEventListener('click', async () => {
