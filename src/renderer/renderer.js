@@ -3,6 +3,7 @@ let currentMessages = [];
 let pendingAttachments = [];
 let isStreaming = false;
 let cancelCurrentStream = null;
+let currentView = 'chats';
 
 const el = (id) => document.getElementById(id);
 const messagesEl = el('messages');
@@ -332,6 +333,7 @@ function clearChat() {
 
 async function loadConversation(id) {
   if (isStreaming) return;
+  if (currentView !== 'chats') setMainView('chats');
   const convo = await window.api.loadConversation(id);
   if (!convo) { clearChat(); return; }
   currentConversationId = id;
@@ -488,6 +490,7 @@ async function regenerateReply() {
 
 el('newChatBtn').addEventListener('click', async () => {
   if (isStreaming) return;
+  if (currentView !== 'chats') setMainView('chats');
   const convo = await window.api.createConversation();
   currentConversationId = convo.id;
   clearChat();
@@ -1206,14 +1209,208 @@ document.addEventListener('paste', async (e) => {
   textInput.focus();
 });
 
+// ---------- Vistas del riel: chat, búsqueda web, equipo, historial ----------
+const VIEW_LABELS = { web: 'Búsqueda Web', team: 'Espacio de Equipo', history: 'Historial de Actividad' };
+
+function setMainView(view) {
+  currentView = view;
+  document.querySelectorAll('.rail-btn[data-nav]').forEach((b) =>
+    b.classList.toggle('active', b.dataset.nav === view));
+  el('chatView').classList.toggle('hidden', view !== 'chats');
+  el('webView').classList.toggle('hidden', view !== 'web');
+  el('teamView').classList.toggle('hidden', view !== 'team');
+  el('historyView').classList.toggle('hidden', view !== 'history');
+  // El selector de modelo / medidor / exportar solo aplica al chat.
+  el('wsRight').classList.toggle('hidden', view !== 'chats');
+  if (view === 'chats') {
+    const c = convosCache.find((x) => x.id === currentConversationId);
+    setProjectName(c ? c.title : null);
+  } else {
+    el('titlebarProject').textContent = VIEW_LABELS[view];
+    el('crumbProject').textContent = VIEW_LABELS[view];
+  }
+  if (view === 'web') { el('webSearchInput').focus(); }
+  else if (view === 'team') refreshTeam();
+  else if (view === 'history') refreshStats();
+}
+
+// ===== Búsqueda web =====
+function renderWebResults(res) {
+  const box = el('webResults');
+  box.innerHTML = '';
+  if (!res.ok) {
+    box.innerHTML = `<p class="hint">No se pudo buscar: ${escapeHtml(res.error || 'error desconocido')}.</p>`;
+    return;
+  }
+  if (!res.results.length) {
+    box.innerHTML = '<p class="hint">Sin resultados. Prueba con otras palabras.</p>';
+    return;
+  }
+  for (const r of res.results) {
+    const item = document.createElement('div');
+    item.className = 'web-result';
+    item.innerHTML =
+      `<div class="web-result-title"><svg class="ico"><use href="#i-link"></use></svg>${escapeHtml(r.title || '(sin título)')}</div>` +
+      (r.snippet ? `<p class="web-result-snippet">${escapeHtml(r.snippet)}</p>` : '') +
+      `<div class="web-result-foot">` +
+      `<span class="web-result-meta"><span class="src">${escapeHtml(r.source || 'web')}</span>` +
+      (r.url ? `<span class="url">${escapeHtml(r.url)}</span>` : '') + `</span>` +
+      `<span class="web-result-actions">` +
+      `<button class="web-result-use" data-url="${escapeHtml(r.url || '')}" data-title="${escapeHtml(r.title || '')}" data-snippet="${escapeHtml(r.snippet || '')}">` +
+      `<svg class="ico"><use href="#i-plus"></use></svg>Usar en el chat</button>` +
+      `</span></div>`;
+    box.appendChild(item);
+  }
+}
+
+function runWebSearch() {
+  const q = el('webSearchInput').value.trim();
+  if (!q) return;
+  const btn = el('webSearchBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ico ico-sm spin"><svg class="ico ico-sm"><use href="#i-refresh"></use></svg></span> Buscando…';
+  window.api.webSearch(q).then((res) => {
+    renderWebResults(res);
+  }).finally(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<svg class="ico ico-sm"><use href="#i-search"></use></svg> Buscar';
+  });
+}
+
+el('webSearchBtn').addEventListener('click', runWebSearch);
+el('webSearchInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); runWebSearch(); }
+});
+// Inserta el resultado elegido como contexto en el chat y vuelve a la vista de chat.
+el('webResults').addEventListener('click', (e) => {
+  const btn = e.target.closest('.web-result-use');
+  if (!btn) return;
+  const { title, url, snippet } = btn.dataset;
+  const block = `[Contexto web — ${title}](${url})\n${snippet || ''}`.trim();
+  textInput.value = (textInput.value ? textInput.value.trim() + '\n\n' : '') + block;
+  textInput.dispatchEvent(new Event('input'));
+  setMainView('chats');
+  textInput.focus();
+});
+
+// ===== Espacio de equipo (espacios de trabajo = usuarios) =====
+async function refreshTeam() {
+  const users = await window.api.listUsers();
+  const current = await window.api.getCurrentUser();
+  const list = el('teamList');
+  list.innerHTML = '';
+  for (const u of users) {
+    const item = document.createElement('div');
+    item.className = 'team-item' + (u.id === current.id ? ' active' : '');
+    const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '';
+    item.innerHTML =
+      `<div class="team-avatar">${escapeHtml((u.name.trim().charAt(0) || '?').toUpperCase())}</div>` +
+      `<div class="team-body">` +
+      `<div class="team-name">${escapeHtml(u.name)}${u.id === current.id ? ' <span class="team-badge">ACTIVO</span>' : ''}</div>` +
+      `<div class="team-meta">${created ? 'Creado ' + escapeHtml(created) : ''}${u.hasPassword ? ' · con contraseña' : ''}</div>` +
+      `</div>` +
+      `<div class="team-item-actions">` +
+      (u.id === current.id ? '' : `<button class="team-btn use" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Cambiar</button>`) +
+      `<button class="team-btn ren" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Renombrar</button>` +
+      (u.id === current.id ? '' : `<button class="team-btn danger del" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Eliminar</button>`) +
+      `</div>`;
+    list.appendChild(item);
+  }
+}
+
+async function switchToSpace(id, name, password) {
+  const result = await window.api.switchUser(id, password || null);
+  if (!result.ok) return result;
+  await refreshUsers();
+  await refreshConversations();
+  await refreshSkills();
+  clearChat();
+  refreshTeam();
+  return result;
+}
+
+el('teamList').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.team-btn');
+  if (!btn) return;
+  const { id, name } = btn.dataset;
+  if (btn.classList.contains('use')) {
+    const users = await window.api.listUsers();
+    const target = users.find((u) => u.id === id);
+    let password = null;
+    if (target && target.hasPassword) {
+      const res = await askPassword({ title: `Contraseña de ${target.name}`, newLabel: 'Contraseña' });
+      if (!res) return;
+      password = res.next;
+    }
+    const result = await switchToSpace(id, name, password);
+    if (!result.ok) alert('Contraseña incorrecta.');
+  } else if (btn.classList.contains('ren')) {
+    const nuevo = prompt('Nuevo nombre del espacio:', name);
+    if (nuevo === null) return;
+    const trimmed = nuevo.trim();
+    if (!trimmed) return;
+    await window.api.renameUser(id, trimmed);
+    await refreshUsers();
+    refreshTeam();
+  } else if (btn.classList.contains('del')) {
+    if (!confirm(`¿Eliminar el espacio "${name}" y todos sus datos? Esta acción no se puede deshacer.`)) return;
+    const res = await window.api.deleteUser(id);
+    if (!res.ok && res.error === 'is-current') {
+      alert('No puedes eliminar el espacio activo. Cambia a otro espacio primero.');
+      return;
+    }
+    refreshTeam();
+  }
+});
+
+el('teamNewBtn').addEventListener('click', async () => {
+  const name = prompt('Nombre del nuevo espacio de trabajo:');
+  if (!name || !name.trim()) return;
+  const res = await askPassword({
+    title: `Contraseña para "${name.trim()}" (opcional)`,
+    newLabel: 'Contraseña (déjalo vacío para no usar una)',
+    allowEmpty: true,
+  });
+  if (res === null) return;
+  await window.api.createUser(name.trim(), res.next || undefined);
+  await refreshUsers();
+  await refreshConversations();
+  await refreshSkills();
+  clearChat();
+  refreshTeam();
+});
+
+// ===== Historial / estadísticas =====
+async function refreshStats() {
+  const s = await window.api.getStats();
+  const fmt = (n) => Number(n || 0).toLocaleString('es-MX');
+  const grid = el('statsGrid');
+  const cards = [
+    { v: fmt(s.conversations), l: 'Conversaciones', accent: true },
+    { v: fmt(s.messages), l: 'Mensajes enviados' },
+    { v: fmt(s.tokensInput + s.tokensOutput), l: 'Tokens usados (↑+↓)' },
+    { v: fmt(s.skills), l: 'Skills guardados' },
+    { v: fmt(s.folders), l: 'Carpetas' },
+    { v: fmt(s.spaces), l: 'Espacios de trabajo' },
+    { v: fmt(s.attachments), l: 'Adjuntos (imágenes/docs)' },
+    { v: s.lastActivity ? new Date(s.lastActivity).toLocaleString() : '—', l: 'Última actividad', wide: true },
+    { v: s.firstActivity ? new Date(s.firstActivity).toLocaleString() : '—', l: 'Primera actividad', wide: true },
+  ];
+  grid.innerHTML = cards.map((c) =>
+    `<div class="stat-card${c.wide ? ' stat-wide' : ''}">` +
+    `<div class="stat-value${c.accent ? ' accent' : ''}">${c.v}</div>` +
+    `<div class="stat-label">${c.l}</div></div>`).join('');
+}
+
+el('statsRefreshBtn').addEventListener('click', refreshStats);
+
 // ---------- Nueva UI: titlebar, riel, dock y menús ----------
 el('winCloseBtn').addEventListener('click', () => window.api.windowControl('close'));
 el('winMinBtn').addEventListener('click', () => window.api.windowControl('minimize'));
 el('winMaxBtn').addEventListener('click', () => window.api.windowControl('maximize'));
 
 document.querySelectorAll('.rail-btn[data-nav]').forEach((btn) => {
-  if (btn.dataset.nav === 'chats') return;
-  btn.addEventListener('click', () => toast('Próximamente disponible.'));
+  btn.addEventListener('click', () => setMainView(btn.dataset.nav));
 });
 
 document.querySelector('.quick-note-btn')?.addEventListener('click', () => el('newChatBtn').click());

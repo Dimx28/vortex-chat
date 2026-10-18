@@ -433,9 +433,70 @@ function importUserData(json) {
   return { importedUsers: users.length };
 }
 
+// Renombra un espacio/usuario.
+function renameUser(userId, name) {
+  const profile = readFullProfile(userId);
+  if (!profile || !profile.id) return null;
+  profile.name = String(name || '').trim().slice(0, 40) || profile.name;
+  writeJSON(path.join(userDir(userId), 'profile.json'), profile);
+  return toPublicProfile(profile);
+}
+
+// Elimina un espacio/usuario por completo (su carpeta con datos).
+// No permite borrar el espacio activo: hay que cambiar a otro primero.
+function deleteUser(userId) {
+  const current = getCurrentUser();
+  if (current && current.id === userId) return { ok: false, error: 'is-current' };
+  const dir = userDir(userId);
+  if (!fs.existsSync(dir)) return { ok: false, error: 'not-found' };
+  fs.rmSync(dir, { recursive: true, force: true });
+  return { ok: true };
+}
+
+// Estadísticas agregadas del espacio de trabajo activo (para la vista Historial).
+function getStats() {
+  const user = getCurrentUser();
+  const dir = path.join(userDir(user.id), 'conversations');
+  let conversations = 0, messages = 0, tokensInput = 0, tokensOutput = 0, attachments = 0;
+  let firstActivity = null, lastActivity = null;
+  if (fs.existsSync(dir)) {
+    fs.readdirSync(dir).filter((f) => f.endsWith('.json')).forEach((f) => {
+      const c = readJSON(path.join(dir, f), null);
+      if (!c) return;
+      conversations++;
+      const msgs = Array.isArray(c.messages) ? c.messages : [];
+      messages += msgs.length;
+      for (const m of msgs) {
+        if (m.role === 'user' && Array.isArray(m.content)) {
+          attachments += m.content.filter((b) => b && (b.type === 'image' || b.type === 'document')).length;
+        }
+        if (m.usage) {
+          tokensInput += m.usage.input || 0;
+          tokensOutput += m.usage.output || 0;
+        }
+      }
+      const created = c.createdAt || c.updatedAt || null;
+      if (created && (!firstActivity || created < firstActivity)) firstActivity = created;
+      if (c.updatedAt && (!lastActivity || c.updatedAt > lastActivity)) lastActivity = c.updatedAt;
+    });
+  }
+  return {
+    conversations,
+    messages,
+    tokensInput,
+    tokensOutput,
+    attachments,
+    skills: listSkills(user.id).length,
+    folders: listFolders().length,
+    spaces: listUsers().length,
+    firstActivity,
+    lastActivity,
+  };
+}
+
 module.exports = {
   init, getConfig, setConfig,
-  listUsers, createUser, getCurrentUser, switchUser, setUserPassword,
+  listUsers, createUser, getCurrentUser, switchUser, setUserPassword, renameUser, deleteUser, getStats,
   listConversations, loadConversation, createConversation,
   saveConversation, deleteConversation, renameConversation,
   listSkills, getSkill, createSkill, updateSkill, deleteSkill,

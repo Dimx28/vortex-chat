@@ -51,6 +51,7 @@
     <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
     <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
   </defs></svg>
 
   <div class="shell">
@@ -69,9 +70,9 @@
         <div class="rail-logo" title="Vortex Chat">V</div>
         <div class="rail-nav">
           <button class="rail-btn active" data-nav="chats" title="Chats" aria-label="Chats"><svg class="ico"><use href="#i-chat"></use></svg></button>
-          <button class="rail-btn" data-nav="web" title="Búsqueda Web — próximamente" aria-label="Búsqueda Web"><svg class="ico"><use href="#i-globe"></use></svg></button>
-          <button class="rail-btn" data-nav="team" title="Espacio de Equipo — próximamente" aria-label="Espacio de Equipo"><svg class="ico"><use href="#i-users"></use></svg></button>
-          <button class="rail-btn" data-nav="history" title="Historial de Actividad — próximamente" aria-label="Historial de Actividad"><svg class="ico"><use href="#i-history"></use></svg></button>
+          <button class="rail-btn" data-nav="web" title="Búsqueda Web" aria-label="Búsqueda Web"><svg class="ico"><use href="#i-globe"></use></svg></button>
+          <button class="rail-btn" data-nav="team" title="Espacio de Equipo" aria-label="Espacio de Equipo"><svg class="ico"><use href="#i-users"></use></svg></button>
+          <button class="rail-btn" data-nav="history" title="Historial de Actividad" aria-label="Historial de Actividad"><svg class="ico"><use href="#i-history"></use></svg></button>
           <button class="rail-btn" id="settingsBtn" title="Configuración" aria-label="Configuración"><svg class="ico"><use href="#i-settings"></use></svg></button>
         </div>
         <div class="rail-bottom">
@@ -124,7 +125,7 @@
       <main class="chat-area">
         <header class="ws-topbar">
           <div class="breadcrumb">Vortex Chat <span class="sep">|</span> <span id="crumbProject">Nueva conversación</span></div>
-          <div class="ws-right">
+          <div class="ws-right" id="wsRight">
             <input id="quickModelInput" class="quick-model" list="quickModelList" type="text"
               title="Modelo activo — escribe o elige y pulsa Enter para cambiarlo" placeholder="modelo…" spellcheck="false" />
             <datalist id="quickModelList"></datalist>
@@ -139,6 +140,7 @@
           </div>
         </header>
 
+        <div class="main-view" id="chatView">
         <div class="chat-canvas">
           <div id="messages" class="messages"></div>
           <div id="welcome" class="welcome">
@@ -198,6 +200,45 @@
               </label>
               <span class="hint">Enter envía · Shift+Enter salto de línea · Ctrl+N nueva conversación</span>
             </div>
+          </div>
+        </div>
+        </div>
+
+        <div class="main-view feature-view hidden" id="webView">
+          <div class="feature-inner">
+            <div class="feature-head">
+              <h2 class="feature-title"><svg class="ico"><use href="#i-globe"></use></svg> Búsqueda Web</h2>
+              <p class="feature-sub">Busca en la web y añade los resultados a tu chat como contexto.</p>
+            </div>
+            <div class="web-search-row">
+              <input id="webSearchInput" class="web-search-input" type="search" placeholder="Buscar en la web…" spellcheck="false" />
+              <button id="webSearchBtn" class="primary-btn"><svg class="ico ico-sm"><use href="#i-search"></use></svg> Buscar</button>
+            </div>
+            <div id="webResults" class="web-results"></div>
+          </div>
+        </div>
+
+        <div class="main-view feature-view hidden" id="teamView">
+          <div class="feature-inner">
+            <div class="feature-head">
+              <h2 class="feature-title"><svg class="ico"><use href="#i-users"></use></svg> Espacio de Equipo</h2>
+              <p class="feature-sub">Espacios de trabajo locales. Cada espacio guarda sus propias conversaciones, skills y carpetas.</p>
+            </div>
+            <div class="team-actions">
+              <button id="teamNewBtn" class="primary-btn"><svg class="ico ico-sm"><use href="#i-plus"></use></svg> Nuevo espacio</button>
+            </div>
+            <div id="teamList" class="team-list"></div>
+          </div>
+        </div>
+
+        <div class="main-view feature-view hidden" id="historyView">
+          <div class="feature-inner">
+            <div class="feature-head">
+              <h2 class="feature-title"><svg class="ico"><use href="#i-history"></use></svg> Historial de Actividad</h2>
+              <p class="feature-sub">Estadísticas de uso del espacio de trabajo activo.</p>
+              <button id="statsRefreshBtn" class="ghost-btn"><svg class="ico ico-sm"><use href="#i-refresh"></use></svg> Actualizar</button>
+            </div>
+            <div id="statsGrid" class="stats-grid"></div>
           </div>
         </div>
       </main>

@@ -13,6 +13,14 @@ contextBridge.exposeInMainWorld('api', {
   getCurrentUser: () => ipcRenderer.invoke('users:current'),
   setUserPassword: (userId, currentPassword, newPassword) =>
     ipcRenderer.invoke('users:setPassword', userId, currentPassword, newPassword),
+  renameUser: (userId, name) => ipcRenderer.invoke('users:rename', userId, name),
+  deleteUser: (userId) => ipcRenderer.invoke('users:delete', userId),
+
+  // Búsqueda web (Wikipedia + DuckDuckGo)
+  webSearch: (query) => ipcRenderer.invoke('web:search', query),
+
+  // Estadísticas del espacio activo
+  getStats: () => ipcRenderer.invoke('stats:summary'),
 
   // Conversaciones
   listConversations: () => ipcRenderer.invoke('conversations:list'),

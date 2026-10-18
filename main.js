@@ -103,6 +103,83 @@ ipcMain.handle('users:switch', (_evt, userId, password) => store.switchUser(user
 ipcMain.handle('users:current', () => store.getCurrentUser());
 ipcMain.handle('users:setPassword', (_evt, userId, currentPassword, newPassword) =>
   store.setUserPassword(userId, currentPassword, newPassword));
+ipcMain.handle('users:rename', (_evt, userId, name) => store.renameUser(userId, name));
+ipcMain.handle('users:delete', (_evt, userId) => store.deleteUser(userId));
+
+// ---- Estadísticas del espacio activo (vista Historial) ----
+ipcMain.handle('stats:summary', () => store.getStats());
+
+// ---- Búsqueda web (Wikipedia + DuckDuckGo; gratuitas, sin clave) ----
+function stripHtml(s) {
+  return String(s || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+ipcMain.handle('web:search', async (_evt, rawQuery) => {
+  const q = String(rawQuery || '').trim();
+  if (!q) return { ok: false, error: 'empty' };
+
+  const results = [];
+  const seen = new Set();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  const headers = { 'User-Agent': 'VortexChat/1.0 (app de escritorio)' };
+
+  const push = (r) => {
+    if (!r || !r.url || seen.has(r.url)) return;
+    seen.add(r.url);
+    results.push(r);
+  };
+
+  try {
+    // 1) Respuesta directa + temas relacionados (DuckDuckGo Instant Answer)
+    try {
+      const ddg = 'https://api.duckduckgo.com/?q=' + encodeURIComponent(q) +
+        '&format=json&no_html=1&skip_disambig=1&t=vortexchat';
+      const r = await fetch(ddg, { signal: ctrl.signal, headers });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.AbstractText) {
+          push({ title: d.Heading || q, snippet: d.AbstractText, url: d.AbstractURL || '', source: d.AbstractSource || 'DuckDuckGo' });
+        }
+        (d.RelatedTopics || []).slice(0, 6).forEach((t) => {
+          if (t.Text && t.FirstURL) {
+            push({ title: String(t.Text).split(' - ')[0], snippet: t.Text, url: t.FirstURL, source: 'DuckDuckGo' });
+          }
+        });
+      }
+    } catch { /* DuckDuckGo es opcional */ }
+
+    // 2) Resultados de búsqueda de Wikipedia en español
+    try {
+      const wiki = 'https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=' +
+        encodeURIComponent(q) + '&format=json&origin=*&srlimit=8';
+      const r = await fetch(wiki, { signal: ctrl.signal, headers });
+      if (r.ok) {
+        const d = await r.json();
+        const hits = (d.query && d.query.search) || [];
+        for (const h of hits) {
+          const url = 'https://es.wikipedia.org/wiki/' + encodeURIComponent(String(h.title).replace(/ /g, '_'));
+          push({ title: h.title, snippet: stripHtml(h.snippet), url, source: 'Wikipedia' });
+        }
+      }
+    } catch { /* Wikipedia es opcional */ }
+
+    return { ok: true, query: q, results };
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) };
+  } finally {
+    clearTimeout(timer);
+  }
+});
 
 // ---- Conversaciones ----
 ipcMain.handle('conversations:list', () => store.listConversations());
