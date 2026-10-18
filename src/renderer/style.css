@@ -1348,3 +1348,76 @@ textarea#textInput::placeholder { color: var(--text-faint); }
 .agent-approval-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
 .empty-state { color: var(--text-muted); text-align: center; margin-top: 40px; font-size: 14px; }
+
+/* ============================================================
+   G. Iconos SVG (sprite de trazos, heredan currentColor)
+   ============================================================ */
+
+.icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.ico {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ico-sm { width: 15px; height: 15px; stroke-width: 1.9; }
+.ico-xs { width: 13px; height: 13px; stroke-width: 2; }
+.ico-lg { width: 20px; height: 20px; }
+.ico.spin { animation: ico-spin .9s linear infinite; }
+@keyframes ico-spin { to { transform: rotate(360deg); } }
+
+/* Buscador del drawer con icono dentro */
+.search-wrap { position: relative; }
+.search-ico {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+.convo-search { padding-left: 29px; }
+
+/* Botones y filas con icono + texto */
+.send-btn,
+.dock-menu-item,
+.move-menu-item,
+.user-menu-row button,
+.update-install-btn:not([hidden]),
+.modal-actions button,
+.skills-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.dock-menu-item,
+.move-menu-item { justify-content: flex-start; }
+
+.bento-ico .ico { color: #fff; width: 18px; height: 18px; }
+.modal-h-ico { color: var(--accent); vertical-align: -3px; }
+
+/* Acciones pequeñas en listas (conversaciones, carpetas, mensajes, skills) */
+.convo-item .actions span,
+.folder-head .actions span,
+.msg-actions button,
+.skill-item .skill-del,
+.attachment-chip .remove { display: inline-flex; align-items: center; }
+.convo-item .actions .ico,
+.folder-head .actions .ico { width: 13px; height: 13px; }
+.folder-head .fold-ico { display: inline-flex; align-items: center; justify-content: center; width: 12px; }
+.folder-head .fold-ico .ico { width: 12px; height: 12px; stroke-width: 2.2; }
+.msg-actions button .ico { width: 14px; height: 14px; }
+.skill-item .skill-del .ico { width: 14px; height: 14px; }
+.attachment-chip .remove .ico { width: 12px; height: 12px; stroke-width: 2.4; }
+.ghost-icon .ico,
+.dock-btn .ico { width: 15px; height: 15px; }
+
+/* Etiquetas de adjunto dentro de los mensajes */
+.msg .att-tag { display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; }
+.msg .att-tag .ico { width: 12px; height: 12px; }

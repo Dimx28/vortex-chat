@@ -164,9 +164,9 @@ function buildConvoItem(c) {
     `<span class="title">${escapeHtml(c.title || 'Sin título')}</span>` +
     (isActive ? '<span class="active-tag">Active</span>' : `<span class="convo-time">${relTime(c.updatedAt)}</span>`) +
     `<span class="actions">` +
-    `<span class="mov" title="Mover a carpeta">📁</span>` +
-    `<span class="ren" title="Renombrar">✏️</span>` +
-    `<span class="del" title="Borrar">🗑</span></span>`;
+    `<span class="mov" title="Mover a carpeta"><svg class="ico ico-sm"><use href="#i-folder-open"></use></svg></span>` +
+    `<span class="ren" title="Renombrar"><svg class="ico ico-sm"><use href="#i-pencil"></use></svg></span>` +
+    `<span class="del" title="Borrar"><svg class="ico ico-sm"><use href="#i-trash"></use></svg></span></span>`;
   item.addEventListener('click', (e) => {
     if (e.target.classList.contains('del') || e.target.classList.contains('ren') || e.target.classList.contains('mov')) return;
     loadConversation(c.id);
@@ -217,7 +217,7 @@ function showMoveMenu(c, anchor) {
   });
   for (const f of foldersCache) {
     if (f.id === c.folderId) continue;
-    addItem(`📁 ${f.name}`, async () => {
+    addItem(`<svg class="ico ico-sm"><use href="#i-folder"></use></svg> ${escapeHtml(f.name)}`, async () => {
       await window.api.setConversationFolder(c.id, f.id);
       refreshConversations();
     });
@@ -272,10 +272,10 @@ async function refreshConversations() {
     const head = document.createElement('div');
     head.className = 'folder-head';
     const collapsed = collapsedFolders.has(f.id);
-    head.innerHTML = `<span class="fold-ico">${collapsed ? '▸' : '▾'}</span>` +
-      `<span class="folder-name">📁 ${escapeHtml(f.name)}</span>` +
+    head.innerHTML = `<span class="fold-ico"><svg class="ico"><use href="${collapsed ? '#i-chev-right' : '#i-chev-down'}"></use></svg></span>` +
+      `<span class="folder-name"><svg class="ico ico-sm"><use href="#i-folder"></use></svg> ${escapeHtml(f.name)}</span>` +
       `<span class="hint count">${convos.length}</span>` +
-      `<span class="actions"><span class="ren" title="Renombrar carpeta">✏️</span><span class="del" title="Eliminar carpeta">🗑</span></span>`;
+      `<span class="actions"><span class="ren" title="Renombrar carpeta"><svg class="ico ico-sm"><use href="#i-pencil"></use></svg></span><span class="del" title="Eliminar carpeta"><svg class="ico ico-sm"><use href="#i-trash"></use></svg></span></span>`;
     head.querySelector('.ren').addEventListener('click', async (e) => {
       e.stopPropagation();
       const nuevo = prompt('Nuevo nombre de la carpeta:', f.name);
@@ -304,7 +304,7 @@ async function refreshConversations() {
   if (loose.length || !foldersCache.length) {
     const head = document.createElement('div');
     head.className = 'folder-head plain';
-    head.innerHTML = `<span class="folder-name">${foldersCache.length ? '📂 Sin carpeta' : '💬 Conversaciones'}</span>` +
+    head.innerHTML = `<span class="folder-name">${foldersCache.length ? '<svg class="ico ico-sm"><use href="#i-folder-open"></use></svg>' : '<svg class="ico ico-sm"><use href="#i-chat"></use></svg>'} ${foldersCache.length ? 'Sin carpeta' : 'Conversaciones'}</span>` +
       `<span class="hint count">${loose.length}</span>`;
     convoListEl.appendChild(head);
     for (const c of loose) convoListEl.appendChild(buildConvoItem(c));
@@ -354,7 +354,7 @@ function imageBlockHtml(block) {
   if (data) {
     return `<img class="msg-img" src="data:${mime};base64,${data}" alt="${escapeHtml(block.fileName || 'imagen')}" title="${escapeHtml(block.fileName || 'imagen')}" />`;
   }
-  return `<div class="att-tag">🖼 ${escapeHtml(block.fileName || 'imagen')}</div>`;
+  return `<div class="att-tag"><svg class="ico ico-sm"><use href="#i-image"></use></svg> ${escapeHtml(block.fileName || 'imagen')}</div>`;
 }
 
 function enhanceCodeBlocks(container) {
@@ -409,9 +409,9 @@ function appendBubble(role, content, index, msg) {
     for (const block of content) {
       if (block.type === 'text') html += renderMarkdownLite(block.text || '');
       else if (block.type === 'image') html += imageBlockHtml(block);
-      else if (block.type === 'document') html += `<div class="att-tag">📄 ${escapeHtml(block.fileName || 'documento')}</div>`;
-      else if (block.kind === 'image') html += `<div class="att-tag">🖼 ${escapeHtml(block.fileName || 'imagen')}</div>`;
-      else if (block.kind) html += `<div class="att-tag">📄 ${escapeHtml(block.fileName || 'archivo')}</div>`;
+      else if (block.type === 'document') html += `<div class="att-tag"><svg class="ico ico-sm"><use href="#i-file"></use></svg> ${escapeHtml(block.fileName || 'documento')}</div>`;
+      else if (block.kind === 'image') html += `<div class="att-tag"><svg class="ico ico-sm"><use href="#i-image"></use></svg> ${escapeHtml(block.fileName || 'imagen')}</div>`;
+      else if (block.kind) html += `<div class="att-tag"><svg class="ico ico-sm"><use href="#i-file"></use></svg> ${escapeHtml(block.fileName || 'archivo')}</div>`;
     }
   }
   div.innerHTML = html;
@@ -442,8 +442,12 @@ function buildActionsBar(role, index, msg) {
   const mk = (label, title, fn) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.textContent = label;
     b.title = title;
+    if (label === '📋') b.innerHTML = '<svg class="ico ico-sm"><use href="#i-copy"></use></svg>';
+    else if (label === '✏️') b.innerHTML = '<svg class="ico ico-sm"><use href="#i-pencil"></use></svg>';
+    else if (label === '🔄') b.innerHTML = '<svg class="ico ico-sm"><use href="#i-refresh"></use></svg>';
+    else if (label === '🗑') b.innerHTML = '<svg class="ico ico-sm"><use href="#i-trash"></use></svg>';
+    else b.textContent = label;
     b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
     bar.appendChild(b);
   };
@@ -505,8 +509,8 @@ function renderAttachmentPreview() {
   const box = el('attachmentPreview');
   box.innerHTML = pendingAttachments.map((f, i) => `
     <div class="attachment-chip">
-      ${f.kind === 'image' ? '🖼' : '📄'} ${escapeHtml(f.fileName)}
-      <span class="remove" data-i="${i}">✕</span>
+      ${f.kind === 'image' ? '<svg class="ico ico-sm"><use href="#i-image"></use></svg>' : '<svg class="ico ico-sm"><use href="#i-file"></use></svg>'} ${escapeHtml(f.fileName)}
+      <span class="remove" data-i="${i}" title="Quitar"><svg class="ico ico-sm"><use href="#i-x"></use></svg></span>
     </div>`).join('');
   box.querySelectorAll('.remove').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -599,8 +603,9 @@ const API_KEY_HINT = {
 function setStreamingUI(streaming) {
   isStreaming = streaming;
   const btn = el('sendBtn');
-  btn.textContent = streaming ? '⏹ Stop' : 'Send ↑';
   btn.classList.toggle('stopping', streaming);
+  if (streaming) btn.innerHTML = '<svg class="ico ico-sm"><use href="#i-stop"></use></svg> Stop';
+  else btn.innerHTML = 'Send <svg class="ico ico-sm"><use href="#i-arrow-up"></use></svg>';
   el('newChatBtn').disabled = streaming;
 }
 
@@ -832,7 +837,7 @@ async function refreshSkillsList() {
     item.className = 'skill-item' + (s.id === el('skillIdInput').value ? ' active' : '');
     item.innerHTML = `<div class="skill-meta"><div class="skill-name">${escapeHtml(s.name)}</div>` +
       (s.description ? `<div class="skill-desc">${escapeHtml(s.description)}</div>` : '') + '</div>' +
-      '<span class="skill-del" title="Borrar">🗑</span>';
+      '<span class="skill-del" title="Borrar"><svg class="ico ico-sm"><use href="#i-trash"></use></svg></span>';
     item.addEventListener('click', (e) => {
       if (e.target.classList.contains('skill-del')) return;
       el('skillIdInput').value = s.id;
@@ -909,8 +914,10 @@ function agentLogStep(cls, text) {
 
 function setAgentRunningUI(running) {
   agentRunning = running;
-  el('agentStartBtn').disabled = running;
-  el('agentStartBtn').textContent = running ? '⏳ En curso…' : '▶ Ejecutar';
+  const startBtn = el('agentStartBtn');
+  startBtn.disabled = running;
+  if (running) startBtn.innerHTML = '<span class="ico ico-sm spin" aria-hidden="true"><svg class="ico ico-sm"><use href="#i-refresh"></use></svg></span> En curso…';
+  else startBtn.innerHTML = '<svg class="ico ico-sm"><use href="#i-play"></use></svg> Ejecutar';
   el('agentCloseBtn').textContent = running ? 'Cancelar y cerrar' : 'Cerrar';
   el('agentApproval').classList.add('hidden');
 }
@@ -1085,7 +1092,7 @@ window.api.onUpdateEvent((evt) => {
     if (!updateDownloaded) banner.hidden = true;
   }
 });
-el('updateInstallBtn').addEventListener('click', () => window.api.installUpdate());
+  el('updateInstallBtn').innerHTML = '<svg class="ico ico-sm"><use href="#i-refresh"></use></svg> Reiniciar para actualizar';
 
 // ---------- Modelo rápido + medidor de contexto ----------
 const COMMON_MODELS = [
