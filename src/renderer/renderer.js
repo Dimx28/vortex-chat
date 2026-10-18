@@ -11,12 +11,12 @@ const convoListEl = el('convoList');
 const userSelect = el('userSelect');
 const textInput = el('textInput');
 
-function toast(msg) {
+function toast(msg, ms = 2600) {
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2600);
+  setTimeout(() => t.remove(), ms);
 }
 
 // ---------- Markdown ----------
@@ -1421,7 +1421,91 @@ el('modelPill').addEventListener('click', () => {
   inp.select();
 });
 
-el('micBtn').addEventListener('click', () => toast('Dictado por voz: pulsa Win+H en Windows.'));
+// ---------- Dictado por voz (Web Speech API de Chromium) ----------
+let speechRec = null;
+let micActive = false;
+
+function micErrorHint(code) {
+  if (code === 'audio-capture') {
+    return 'Windows bloquea el micrófono para las apps de escritorio. Ve a Configuración > Privacidad > Micrófono y activa "Permitir que las aplicaciones de escritorio accedan al micrófono".';
+  }
+  if (code === 'not-allowed' || code === 'service-not-allowed') {
+    return 'Permiso de micrófono denegado para el dictado.';
+  }
+  if (code === 'network') {
+    return 'El servicio de dictado del navegador no está disponible en este momento.';
+  }
+  if (code === 'language-not-supported') return 'El idioma de dictado no está soportado en este sistema.';
+  return 'Dictado no disponible.';
+}
+
+function setMicUI(active) {
+  micActive = active;
+  const btn = el('micBtn');
+  btn.classList.toggle('on', active);
+  btn.title = active ? 'Detener dictado — o pulsa Win+H en Windows' : 'Dictar al chat (o pulsa Win+H en Windows)';
+}
+
+function stopMic() {
+  setMicUI(false);
+  if (speechRec) { try { speechRec.stop(); } catch { /* ya detenido */ } }
+}
+
+function appendTranscript(text) {
+  if (!text) return;
+  if (currentView !== 'chats') setMainView('chats');
+  const cur = textInput.value;
+  textInput.value = cur ? cur.replace(/\s+$/, '') + ' ' + text : text;
+  textInput.dispatchEvent(new Event('input'));
+}
+
+function startMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    toast('Este sistema no incluye dictado integrado. Pulsa Win+H para dictar en Windows.');
+    return;
+  }
+  const rec = new SR();
+  const sysLang = (navigator.language || 'es-ES').toLowerCase();
+  rec.lang = sysLang.startsWith('es') ? navigator.language : 'es-ES';
+  rec.continuous = true;
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  rec.onresult = (e) => {
+    let out = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) out += e.results[i][0].transcript;
+    }
+    appendTranscript(out.trim());
+  };
+  rec.onerror = (e) => {
+    const code = e && e.error;
+    // Errores transitorios: se ignoran y el reconocedor sigue (o se reinicia) solo.
+    if (code === 'no-speech' || code === 'aborted') return;
+    stopMic();
+    toast(micErrorHint(code), 7000);
+  };
+  rec.onend = () => {
+    // Si el usuario no lo detuvo, el servicio cortó por silencio: seguimos escuchando.
+    if (micActive) setTimeout(() => { if (micActive) { try { rec.start(); } catch { /* ya iniciado */ } } }, 250);
+  };
+
+  speechRec = rec;
+  try {
+    rec.start();
+    setMicUI(true);
+    toast('Escuchando… habla ahora. Pulsa el micrófono para detener.');
+  } catch {
+    setMicUI(false);
+    toast(micErrorHint('not-allowed'));
+  }
+}
+
+el('micBtn').addEventListener('click', () => {
+  if (micActive) stopMic();
+  else startMic();
+});
 
 // Menú del dock (skills y complementos)
 const dockMenu = el('dockMenu');
