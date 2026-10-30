@@ -78,7 +78,7 @@ Ya está generado el instalador con `electron-builder`:
 npm run dist
 ```
 
-Eso crea `dist/Vortex Chat Setup 1.0.0.exe` (instalador NSIS: se puede elegir la carpeta
+Eso crea `dist/Vortex Chat Setup 1.0.1.exe` (instalador NSIS: se puede elegir la carpeta
 de instalación y crea acceso directo en el escritorio). También hay `npm run dist:dir`
 para generar solo la carpeta descomprimida (sin instalador), más rápida de probar.
 

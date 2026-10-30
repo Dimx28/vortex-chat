@@ -1,6 +1,6 @@
 {
   "name": "vortex-chat",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vortex Chat — App de escritorio para chatear con Claude u otros proveedores (API propia)",
   "main": "main.js",
   "scripts": {
